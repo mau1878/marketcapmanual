@@ -88,20 +88,20 @@ def clean_data(data_str):
 
 df_shares = clean_data(input_data)
 
-# Step 2: Interpolate shares outstanding for daily data
+# Step 2: Interpolate shares outstanding for daily data and fill forward the last available value for future dates
 if not df_shares.empty:
     df_shares.set_index('Date', inplace=True)
     df_shares_daily = df_shares.resample('D').interpolate(method='linear')
+
+    # Use the last available shares outstanding value for any date beyond the last known data point
+    df_shares_daily = df_shares_daily.ffill()
 
     # Step 3: User selects the stock ticker, start, and end dates
     ticker = st.text_input("Enter Stock Ticker (e.g., AAPL, MSFT)", 'AAPL')
 
     # Allow the user to select start and end dates
     min_date = df_shares_daily.index.min().date()
-    max_date = df_shares_daily.index.max().date()
-
-    # Extend max_date to today's date or beyond
-    max_date = max(max_date, date.today())  # Ensure the date picker includes today
+    max_date = max(df_shares_daily.index.max().date(), date.today())  # Ensure the date picker includes today
 
     start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=max_date)
     end_date = st.date_input("End Date", max_date, min_value=min_date, max_value=max_date)
@@ -121,7 +121,10 @@ if not df_shares.empty:
 
         # Step 5: Merge stock prices with shares outstanding
         stock_data.index = pd.to_datetime(stock_data.index)
-        df_merged = pd.merge(stock_data[['Price']], df_shares_daily, left_index=True, right_index=True, how='inner')
+        df_merged = pd.merge(stock_data[['Price']], df_shares_daily, left_index=True, right_index=True, how='left')
+
+        # Use the last available shares outstanding for dates without corresponding data
+        df_merged['SharesOutstanding'].fillna(method='ffill', inplace=True)
 
         # Step 6: Calculate market capitalization
         df_merged['MarketCap'] = df_merged['Price'] * df_merged['SharesOutstanding']
