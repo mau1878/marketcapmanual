@@ -99,6 +99,7 @@ if not df_shares.empty:
     # Allow user to pick an end date that includes today + 1 day
     today_plus_one = date.today() + timedelta(days=1)
 
+    # User input for date range
     start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=today_plus_one)
     end_date = st.date_input("End Date", today_plus_one, min_value=min_date, max_value=today_plus_one)
 
@@ -126,25 +127,27 @@ if not df_shares.empty:
         fig = go.Figure()
 
         # Plot Market Capitalization on primary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='grey')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='cyan')))
 
         # Plot Price evolution on secondary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='yellow', dash='dot')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='orange', dash='dot')))
 
         # Update layout for dual y-axes and watermark
         fig.update_layout(
             title=f'Market Capitalization and Price Evolution of {ticker}',
             yaxis=dict(
                 title='Market Cap',
-                titlefont=dict(color='grey'),
-                tickfont=dict(color='grey'),
+                titlefont=dict(color='cyan'),
+                tickfont=dict(color='cyan'),
+                gridcolor='rgba(0, 255, 255, 0.2)'  # Light cyan gridlines for dark theme
             ),
             yaxis2=dict(
                 title='Price',
-                titlefont=dict(color='yellow'),
-                tickfont=dict(color='yellow'),
+                titlefont=dict(color='orange'),
+                tickfont=dict(color='orange'),
                 overlaying='y',
-                side='right'
+                side='right',
+                gridcolor='rgba(255, 165, 0, 0.2)'  # Light orange gridlines for dark theme
             ),
             annotations=[
                 dict(
@@ -152,11 +155,14 @@ if not df_shares.empty:
                     xref="paper", yref="paper",
                     x=0.5, y=0.5,
                     xanchor="center", yanchor="middle",
-                    opacity=0.1,
-                    font=dict(size=60, color="lightgrey"),
+                    opacity=0.2,
+                    font=dict(size=40, color="grey"),
                     showarrow=False
                 )
-            ]
+            ],
+            plot_bgcolor='black',
+            paper_bgcolor='black',
+            font_color='white'
         )
 
         st.plotly_chart(fig)
