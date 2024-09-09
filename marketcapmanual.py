@@ -126,10 +126,10 @@ if not df_shares.empty:
         fig = go.Figure()
 
         # Plot Market Capitalization on primary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='grey')))
 
         # Plot Price evolution on secondary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='green', dash='dot')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='yellow', dash='dot')))
 
         # Update layout for dual y-axes and watermark
         fig.update_layout(
