@@ -77,11 +77,21 @@ df_shares['SharesOutstanding'] = df_shares['SharesOutstanding'] * 1_000_000  # C
 df_shares.set_index('Date', inplace=True)
 df_shares_daily = df_shares.resample('D').interpolate(method='linear')
 
-# Step 3: Fetch stock prices using yfinance
+# Step 3: User selects the stock ticker, start, and end dates
 ticker = st.text_input("Enter Stock Ticker (e.g., AAPL, MSFT)", 'AAPL')
-start_date = df_shares_daily.index.min()
-end_date = df_shares_daily.index.max()
 
+# Allow the user to select start and end dates
+min_date = df_shares_daily.index.min().date()
+max_date = df_shares_daily.index.max().date()
+
+start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=max_date)
+end_date = st.date_input("End Date", max_date, min_value=min_date, max_value=max_date)
+
+# Convert start and end date to datetime format
+start_date = pd.to_datetime(start_date)
+end_date = pd.to_datetime(end_date)
+
+# Step 4: Fetch stock prices using yfinance for the selected date range
 if st.button('Fetch Data and Plot'):
     stock_data = yf.download(ticker, start=start_date, end=end_date)
 
@@ -90,13 +100,13 @@ if st.button('Fetch Data and Plot'):
     else:
         stock_data['Price'] = stock_data['Close']
 
-    # Step 4: Merge stock prices with shares outstanding
+    # Step 5: Merge stock prices with shares outstanding
     stock_data.index = pd.to_datetime(stock_data.index)
     df_merged = pd.merge(stock_data[['Price']], df_shares_daily, left_index=True, right_index=True, how='inner')
 
-    # Step 5: Calculate market capitalization
+    # Step 6: Calculate market capitalization
     df_merged['MarketCap'] = df_merged['Price'] * df_merged['SharesOutstanding']
 
-    # Step 6: Plot the data using Plotly
+    # Step 7: Plot the data using Plotly
     fig = px.line(df_merged, x=df_merged.index, y='MarketCap', title=f'Market Capitalization of {ticker}')
     st.plotly_chart(fig)
