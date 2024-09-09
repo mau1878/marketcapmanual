@@ -136,13 +136,13 @@ if not df_shares.empty:
             title=f'Market Capitalization and Price Evolution of {ticker}',
             yaxis=dict(
                 title='Market Cap',
-                titlefont=dict(color='blue'),
-                tickfont=dict(color='blue'),
+                titlefont=dict(color='grey'),
+                tickfont=dict(color='grey'),
             ),
             yaxis2=dict(
                 title='Price',
-                titlefont=dict(color='green'),
-                tickfont=dict(color='green'),
+                titlefont=dict(color='yellow'),
+                tickfont=dict(color='yellow'),
                 overlaying='y',
                 side='right'
             ),
