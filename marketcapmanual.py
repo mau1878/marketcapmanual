@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 import plotly.express as px
 from io import StringIO
+from datetime import date
 
 # Streamlit app
 st.title('Market Capitalization Plot Based on Shares Outstanding')
@@ -98,6 +99,9 @@ if not df_shares.empty:
     # Allow the user to select start and end dates
     min_date = df_shares_daily.index.min().date()
     max_date = df_shares_daily.index.max().date()
+
+    # Extend max_date to today's date or beyond
+    max_date = max(max_date, date.today())  # Ensure the date picker includes today
 
     start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=max_date)
     end_date = st.date_input("End Date", max_date, min_value=min_date, max_value=max_date)
