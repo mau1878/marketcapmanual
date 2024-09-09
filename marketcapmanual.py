@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-import plotly.express as px
+import plotly.graph_objects as go
 from io import StringIO
-from datetime import date
+from datetime import date, timedelta
 
 # Streamlit app
 st.title('Market Capitalization Plot Based on Shares Outstanding')
@@ -70,15 +70,11 @@ input_data = st.text_area("Enter the data in the format `YYYY-MM-DD\tShares in M
 
 # Clean and preprocess the data
 def clean_data(data_str):
-    # Remove extra spaces and newlines
     data_str = data_str.strip()
-    # Read the cleaned data into a DataFrame
     data = StringIO(data_str)
     try:
         df = pd.read_csv(data, sep='\t', names=['Date', 'SharesOutstanding'])
-        # Ensure correct date format and handle parsing errors
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        # Drop rows where the date could not be parsed
         df.dropna(subset=['Date'], inplace=True)
         df['SharesOutstanding'] = df['SharesOutstanding'] * 1_000_000  # Convert to actual number of shares
         return df
@@ -92,21 +88,20 @@ df_shares = clean_data(input_data)
 if not df_shares.empty:
     df_shares.set_index('Date', inplace=True)
     df_shares_daily = df_shares.resample('D').interpolate(method='linear')
-
-    # Use the last available shares outstanding value for any date beyond the last known data point
     df_shares_daily = df_shares_daily.ffill()
 
     # Step 3: User selects the stock ticker, start, and end dates
     ticker = st.text_input("Enter Stock Ticker (e.g., AAPL, MSFT)", 'AAPL')
 
-    # Allow the user to select start and end dates
     min_date = df_shares_daily.index.min().date()
-    max_date = max(df_shares_daily.index.max().date(), date.today())  # Ensure the date picker includes today
+    max_date = max(df_shares_daily.index.max().date(), date.today())
 
-    start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=max_date)
-    end_date = st.date_input("End Date", max_date, min_value=min_date, max_value=max_date)
+    # Allow user to pick an end date that includes today + 1 day
+    today_plus_one = date.today() + timedelta(days=1)
 
-    # Convert start and end date to datetime format
+    start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=today_plus_one)
+    end_date = st.date_input("End Date", today_plus_one, min_value=min_date, max_value=today_plus_one)
+
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
 
@@ -122,13 +117,46 @@ if not df_shares.empty:
         # Step 5: Merge stock prices with shares outstanding
         stock_data.index = pd.to_datetime(stock_data.index)
         df_merged = pd.merge(stock_data[['Price']], df_shares_daily, left_index=True, right_index=True, how='left')
-
-        # Use the last available shares outstanding for dates without corresponding data
         df_merged['SharesOutstanding'].fillna(method='ffill', inplace=True)
 
         # Step 6: Calculate market capitalization
         df_merged['MarketCap'] = df_merged['Price'] * df_merged['SharesOutstanding']
 
-        # Step 7: Plot the data using Plotly
-        fig = px.line(df_merged, x=df_merged.index, y='MarketCap', title=f'Market Capitalization of {ticker}')
+        # Step 7: Plot the data using Plotly Graph Objects for dual axes
+        fig = go.Figure()
+
+        # Plot Market Capitalization on primary y-axis
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='blue')))
+
+        # Plot Price evolution on secondary y-axis
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='green', dash='dot')))
+
+        # Update layout for dual y-axes and watermark
+        fig.update_layout(
+            title=f'Market Capitalization and Price Evolution of {ticker}',
+            yaxis=dict(
+                title='Market Cap',
+                titlefont=dict(color='blue'),
+                tickfont=dict(color='blue'),
+            ),
+            yaxis2=dict(
+                title='Price',
+                titlefont=dict(color='green'),
+                tickfont=dict(color='green'),
+                overlaying='y',
+                side='right'
+            ),
+            annotations=[
+                dict(
+                    text="MTaurus - X: MTaurus_ok",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5,
+                    xanchor="center", yanchor="middle",
+                    opacity=0.1,
+                    font=dict(size=60, color="lightgrey"),
+                    showarrow=False
+                )
+            ]
+        )
+
         st.plotly_chart(fig)
