@@ -6,10 +6,10 @@ from io import StringIO
 from datetime import date, timedelta
 
 # Streamlit app
-st.title('Market Capitalization Plot Based on Shares Outstanding')
+st.title('Gráfico de Capitalización de Mercado Basado en Acciones en Circulación')
 
 # Step 1: User input for shares outstanding data
-st.subheader("Insert Quarterly Shares Outstanding Data (Date, Shares in Millions)")
+st.subheader("Inserte Datos Trimestrales de Acciones en Circulación (Fecha, Acciones en Millones)")
 example_data = """
 2024-06-30\t54
 2024-03-31\t54
@@ -66,88 +66,88 @@ example_data = """
 2011-06-30\t61
 2011-03-31\t74
 """
-input_data = st.text_area("Enter the data in the format `YYYY-MM-DD\tShares in Millions`", example_data, height=300)
+input_data = st.text_area("Ingrese los datos en el formato `YYYY-MM-DD\tAcciones en Millones`", example_data, height=300)
 
 # Clean and preprocess the data
 def clean_data(data_str):
     data_str = data_str.strip()
     data = StringIO(data_str)
     try:
-        df = pd.read_csv(data, sep='\t', names=['Date', 'SharesOutstanding'])
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        df.dropna(subset=['Date'], inplace=True)
-        df['SharesOutstanding'] = df['SharesOutstanding'] * 1_000_000  # Convert to actual number of shares
+        df = pd.read_csv(data, sep='\t', names=['Fecha', 'AccionesEnCirculacion'])
+        df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+        df.dropna(subset=['Fecha'], inplace=True)
+        df['AccionesEnCirculacion'] = df['AccionesEnCirculacion'] * 1_000_000  # Convertir a número real de acciones
         return df
     except Exception as e:
-        st.error(f"Error processing data: {e}")
+        st.error(f"Error al procesar los datos: {e}")
         return pd.DataFrame()
 
 df_shares = clean_data(input_data)
 
 # Step 2: Interpolate shares outstanding for daily data and fill forward the last available value for future dates
 if not df_shares.empty:
-    df_shares.set_index('Date', inplace=True)
-    df_shares_daily = df_shares.resample('D').interpolate(method='linear')
-    df_shares_daily = df_shares_daily.ffill()
+    df_shares.set_index('Fecha', inplace=True)
+    df_shares_diario = df_shares.resample('D').interpolate(method='linear')
+    df_shares_diario = df_shares_diario.ffill()
 
     # Step 3: User selects the stock ticker, start, and end dates
-    ticker = st.text_input("Enter Stock Ticker (e.g., AAPL, MSFT)", 'AAPL')
+    ticker = st.text_input("Ingrese el Ticker de la Acción (ej. AAPL, MSFT)", 'AAPL')
 
-    min_date = df_shares_daily.index.min().date()
-    max_date = max(df_shares_daily.index.max().date(), date.today())
+    min_date = df_shares_diario.index.min().date()
+    max_date = max(df_shares_diario.index.max().date(), date.today())
 
     # Allow user to pick an end date that includes today + 1 day
-    today_plus_one = date.today() + timedelta(days=1)
+    hoy_mas_uno = date.today() + timedelta(days=1)
 
     # User input for date range
-    start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=today_plus_one)
-    end_date = st.date_input("End Date", today_plus_one, min_value=min_date, max_value=today_plus_one)
+    start_date = st.date_input("Fecha de Inicio", min_date, min_value=min_date, max_value=hoy_mas_uno)
+    end_date = st.date_input("Fecha de Fin", hoy_mas_uno, min_value=min_date, max_value=hoy_mas_uno)
 
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
 
     # Step 4: Fetch stock prices using yfinance for the selected date range
-    if st.button('Fetch Data and Plot'):
+    if st.button('Obtener Datos y Graficar'):
         stock_data = yf.download(ticker, start=start_date, end=end_date)
 
         if 'Adj Close' in stock_data.columns:
-            stock_data['Price'] = stock_data['Adj Close']
+            stock_data['Precio'] = stock_data['Adj Close']
         else:
-            stock_data['Price'] = stock_data['Close']
+            stock_data['Precio'] = stock_data['Close']
 
         # Step 5: Merge stock prices with shares outstanding
         stock_data.index = pd.to_datetime(stock_data.index)
-        df_merged = pd.merge(stock_data[['Price']], df_shares_daily, left_index=True, right_index=True, how='left')
-        df_merged['SharesOutstanding'].fillna(method='ffill', inplace=True)
+        df_merged = pd.merge(stock_data[['Precio']], df_shares_diario, left_index=True, right_index=True, how='left')
+        df_merged['AccionesEnCirculacion'].fillna(method='ffill', inplace=True)
 
         # Step 6: Calculate market capitalization
-        df_merged['MarketCap'] = df_merged['Price'] * df_merged['SharesOutstanding']
+        df_merged['CapitalizacionDeMercado'] = df_merged['Precio'] * df_merged['AccionesEnCirculacion']
 
         # Step 7: Plot the data using Plotly Graph Objects for dual axes
         fig = go.Figure()
 
         # Plot Market Capitalization on primary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['MarketCap'], name='Market Cap', yaxis='y1', line=dict(color='cyan')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['CapitalizacionDeMercado'], name='Capitalización de Mercado', yaxis='y1', line=dict(color='cyan')))
 
         # Plot Price evolution on secondary y-axis
-        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Price'], name='Price', yaxis='y2', line=dict(color='orange', dash='dot')))
+        fig.add_trace(go.Scatter(x=df_merged.index, y=df_merged['Precio'], name='Precio', yaxis='y2', line=dict(color='orange', dash='dot')))
 
         # Update layout for dual y-axes and watermark
         fig.update_layout(
-            title=f'Market Capitalization and Price Evolution of {ticker}',
+            title=f'Capitalización de Mercado y Evolución del Precio de {ticker}',
             yaxis=dict(
-                title='Market Cap',
+                title='Capitalización de Mercado',
                 titlefont=dict(color='cyan'),
                 tickfont=dict(color='cyan'),
-                gridcolor='rgba(0, 255, 255, 0.2)'  # Light cyan gridlines for dark theme
+                gridcolor='rgba(0, 255, 255, 0.2)'  # Lineas de la cuadrícula en cian para tema oscuro
             ),
             yaxis2=dict(
-                title='Price',
+                title='Precio',
                 titlefont=dict(color='orange'),
                 tickfont=dict(color='orange'),
                 overlaying='y',
                 side='right',
-                gridcolor='rgba(255, 165, 0, 0.2)'  # Light orange gridlines for dark theme
+                gridcolor='rgba(255, 165, 0, 0.2)'  # Lineas de la cuadrícula en naranja para tema oscuro
             ),
             annotations=[
                 dict(
